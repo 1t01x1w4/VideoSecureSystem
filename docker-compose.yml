@@ -74,6 +74,7 @@ services:
       APP_MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       APP_MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       # 安全
+      SERVER_SSL_KEY_STORE: file:/app/keystore.p12
       KEYSTORE_PASSWORD: ${KEYSTORE_PASSWORD:-vsec123}
       VSEC_SERVER_SECRET: ${VSEC_SERVER_SECRET:-vsec-server-secret-dev}
       # 邮件
