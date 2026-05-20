@@ -1,0 +1,120 @@
+services:
+  # ==================== PostgreSQL ====================
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-vsec}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-vsec123}
+      POSTGRES_DB: ${DB_NAME:-vsec_storage}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-vsec} -d ${DB_NAME:-vsec_storage}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - vsec-net
+
+  # ==================== Redis ====================
+  redis:
+    image: redis:7-alpine
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-vsec_redis}
+      --save ""
+      --appendonly no
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-vsec_redis}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - vsec-net
+
+  # ==================== MinIO ====================
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - vsec-net
+    ports:
+      - "9001:9001"
+
+  # ==================== 后端 ====================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    environment:
+      # 数据源 - 指向 Docker 服务名
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-vsec_storage}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-vsec}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-vsec123}
+      # Redis
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-vsec_redis}
+      # MinIO
+      APP_MINIO_ENDPOINT: http://minio:9000
+      APP_MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      APP_MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      # 安全
+      KEYSTORE_PASSWORD: ${KEYSTORE_PASSWORD:-vsec123}
+      VSEC_SERVER_SECRET: ${VSEC_SERVER_SECRET:-vsec-server-secret-dev}
+      # 邮件
+      MAIL_USERNAME: ${MAIL_USERNAME:-dev@vsec.local}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-dev}
+      # 临时目录（容器内路径）
+      APP_STORAGE_TEMP_DIR: /tmp/vsec-upload
+      # 等待数据库就绪再启动
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - vsec-net
+    ports:
+      - "8443:8443"
+
+  # ==================== 前端 ====================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - vsec-net
+    ports:
+      - "8080:80"
+
+# ==================== 数据卷 ====================
+volumes:
+  pgdata:
+  minio_data:
+
+# ==================== 网络 ====================
+networks:
+  vsec-net:
+    driver: bridge
