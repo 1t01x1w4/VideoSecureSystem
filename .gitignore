@@ -36,3 +36,7 @@ Thumbs.db
 # ===== 临时文件 =====
 *.swp
 *.swo
+
+# 测试残留
+cookies*.txt
+*.rdb
