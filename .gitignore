@@ -1,0 +1,38 @@
+# ===== Java / Maven =====
+backend/target/
+*.class
+*.jar
+*.war
+
+# ===== TLS 私钥（通过 scripts/gen-keystore.sh 生成）=====
+backend/src/main/resources/keystore.p12
+
+# ===== Node / Frontend =====
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ===== 环境变量（本地开发配置）=====
+.env
+.env.local
+.env.*.local
+
+# ===== 日志 =====
+*.log
+*.tmp
+
+# ===== IDE =====
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+
+# ===== OS =====
+Thumbs.db
+.DS_Store
+*~
+
+# ===== 临时文件 =====
+*.swp
+*.swo

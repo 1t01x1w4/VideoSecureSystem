@@ -1,0 +1,115 @@
+spring:
+  application:
+    name: vsec-storage
+
+  # === 数据源 PostgreSQL ===
+  datasource:
+    url: jdbc:postgresql://localhost:5432/vsec_storage
+    username: ${DB_USERNAME:vsec}
+    password: ${DB_PASSWORD:vsec123}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+
+  # === JPA ===
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  sql:
+    init:
+      mode: never
+
+  # === Redis（会话 & 缓存）===
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD:}
+      timeout: 3000ms
+
+  # === Redis 会话配置 ===
+  session:
+    store-type: redis
+    timeout: 30m
+    redis:
+      namespace: vsec:session
+      flush-mode: on_save
+
+  # === 邮件 ===
+  mail:
+    host: smtp.qq.com
+    port: 587
+    username: ${MAIL_USERNAME:dev@vsec.local}
+    password: ${MAIL_PASSWORD:dev}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+    dev-mode: false
+
+  # === 文件上传限制 ===
+  servlet:
+    multipart:
+      max-file-size: 5120MB
+      max-request-size: 5120MB
+
+# === 服务器 ===
+server:
+  port: ${SERVER_PORT:8443}
+  ssl:
+    key-store: classpath:keystore.p12
+    key-store-password: ${KEYSTORE_PASSWORD:changeit}
+    key-store-type: PKCS12
+    key-alias: vsec
+  servlet:
+    session:
+      cookie:
+        name: VSEC_SESSION
+        http-only: true
+        secure: true
+        same-site: lax
+        max-age: 30m
+
+# === 应用自定义配置 ===
+app:
+  security:
+    # Argon2id 参数
+    argon2:
+      memory-kb: 65536       # 64 MB
+      iterations: 4
+      parallelism: 2
+
+    # 登录失败限制
+    login:
+      max-attempts: 5
+      lock-minutes: 15
+
+    # 验证码有效期
+    code:
+      ttl-minutes: 5
+      length: 6
+
+    # SM4-CTR 分块大小
+    chunk-size: 5242880       # 5 MB
+
+    # 服务端密钥（用于加密 Session 中的 enc_key）— 生产环境必须修改
+    server-secret: ${VSEC_SERVER_SECRET:change-me-in-production}
+
+  # MinIO 对象存储
+  minio:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket: ${MINIO_BUCKET:vsec-videos}
+
+  # 上传临时目录
+  storage:
+    temp-dir: ${TEMP_DIR:C:/tools/vsec/storage/temp}
+
+# === 日志 ===
+logging:
+  level:
+    com.vsec: DEBUG
+    org.springframework.security: INFO
