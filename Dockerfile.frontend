@@ -1,5 +1,7 @@
 # ===== Stage 1: 构建 =====
 FROM node:22-alpine AS build
+# 替换 npm 源为国内镜像
+RUN npm config set registry https://registry.npmmirror.com
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci

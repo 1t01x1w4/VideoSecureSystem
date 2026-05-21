@@ -1,7 +1,20 @@
 # ===== Stage 1: 构建 =====
 FROM eclipse-temurin:21-jdk-alpine AS build
+# 替换 Alpine apk 源为国内镜像
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
 RUN apk add --no-cache maven
 WORKDIR /build
+# 配置 Maven 国内镜像
+RUN mkdir -p /root/.m2 && printf '<?xml version="1.0" encoding="UTF-8"?>\n\
+<settings>\n\
+  <mirrors>\n\
+    <mirror>\n\
+      <id>aliyun</id>\n\
+      <mirrorOf>central</mirrorOf>\n\
+      <url>https://maven.aliyun.com/repository/public</url>\n\
+    </mirror>\n\
+  </mirrors>\n\
+</settings>\n' > /root/.m2/settings.xml
 COPY backend/pom.xml .
 RUN mvn dependency:go-offline -q
 COPY backend/src ./src
@@ -9,6 +22,8 @@ RUN mvn package -DskipTests -q
 
 # ===== Stage 2: 运行 =====
 FROM eclipse-temurin:21-jre-alpine
+# 替换 Alpine apk 源为国内镜像
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
 RUN apk add --no-cache openjdk21-jre-headless
 WORKDIR /app
 COPY --from=build /build/target/*.jar app.jar
