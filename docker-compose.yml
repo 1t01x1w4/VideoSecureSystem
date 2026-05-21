@@ -62,6 +62,8 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     environment:
+      # JVM 内存限制（2GB 服务器建议值）
+      JAVA_TOOL_OPTIONS: -Xmx384m -Xms128m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
       # 数据源 - 指向 Docker 服务名
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-vsec_storage}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-vsec}
