@@ -65,7 +65,7 @@ public class AuthService {
     @Value("${spring.mail.dev-mode:true}")
     private boolean mailDevMode;
 
-    @Value("${app.security.server-secret:changeme}")
+    @Value("${app.security.server-secret:vsec-server-secret-dev}")
     private String serverSecret;
 
     public AuthService(UserRepository userRepository,

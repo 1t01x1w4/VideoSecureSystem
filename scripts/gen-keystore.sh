@@ -3,7 +3,7 @@
 # 用法: bash scripts/gen-keystore.sh
 
 KEYSTORE="backend/src/main/resources/keystore.p12"
-PASSWORD="${KEYSTORE_PASSWORD:-changeme}"
+PASSWORD="${KEYSTORE_PASSWORD:-vsec123}"
 ALIAS="vsec"
 
 echo ">>> 生成自签名证书: $KEYSTORE"

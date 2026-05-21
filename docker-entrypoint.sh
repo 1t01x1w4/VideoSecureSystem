@@ -2,7 +2,7 @@
 set -e
 
 KEYSTORE="/app/keystore.p12"
-KEYSTORE_PASSWORD="${KEYSTORE_PASSWORD:-changeme}"
+KEYSTORE_PASSWORD="${KEYSTORE_PASSWORD:-vsec123}"
 
 # 生成自签名证书（首次运行）
 if [ ! -f "$KEYSTORE" ]; then
