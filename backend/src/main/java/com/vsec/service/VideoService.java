@@ -2,7 +2,9 @@ package com.vsec.service;
 
 import com.vsec.crypto.CryptoUtil;
 import com.vsec.entity.Video;
+import com.vsec.entity.VideoKeyword;
 import com.vsec.exception.VsecException;
+import com.vsec.repository.VideoKeywordRepository;
 import com.vsec.repository.VideoRepository;
 import com.vsec.storage.StorageService;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -11,13 +13,19 @@ import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.text.Normalizer;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -28,6 +36,7 @@ public class VideoService {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final VideoRepository videoRepository;
+    private final VideoKeywordRepository videoKeywordRepository;
     private final StringRedisTemplate redis;
     private final StorageService storageService;
     private final Path tempRoot;
@@ -35,11 +44,16 @@ public class VideoService {
     @Value("${app.security.chunk-size:5242880}")
     private int chunkSize;
 
+    @Value("${app.security.server-secret:vsec-server-secret-dev}")
+    private String serverSecret;
+
     public VideoService(VideoRepository videoRepository,
+                        VideoKeywordRepository videoKeywordRepository,
                         StringRedisTemplate redis,
                         StorageService storageService,
                         @Value("${app.storage.temp-dir:/tmp/vsec-storage}") String tempDir) {
         this.videoRepository = videoRepository;
+        this.videoKeywordRepository = videoKeywordRepository;
         this.redis = redis;
         this.storageService = storageService;
         this.tempRoot = Paths.get(tempDir);
@@ -219,7 +233,17 @@ public class VideoService {
                     title != null ? title : filename, filename,
                     encryptedDek, ctrIv, origHash, encHash,
                     fileKey, mimeType, totalSize);
-            videoRepository.save(video);
+            videoRepository.saveAndFlush(video);
+
+            // 构建加密搜索索引（独立于视频保存，失败不回滚）
+            try {
+                Set<String> tokens = new LinkedHashSet<>();
+                tokens.addAll(extractBigrams(normalize(title != null ? title : filename)));
+                tokens.addAll(extractBigrams(normalize(filename)));
+                buildKeywordIndex(videoId, tokens);
+            } catch (Exception e) {
+                log.warn("搜索索引构建失败: videoId={}, error={}", videoId, e.getMessage());
+            }
 
             Files.deleteIfExists(tempEncFile);
 
@@ -244,8 +268,15 @@ public class VideoService {
 
     // ==================== 视频列表 ====================
 
-    public List<Map<String, Object>> listVideos(String uuid) {
-        List<Video> videos = videoRepository.findByUuidOrderByCreatedAtDesc(uuid);
+    public List<Map<String, Object>> listVideos(String uuid, String keyword) {
+        List<Video> videos;
+        if (keyword != null && !keyword.isBlank()) {
+            Set<String> videoIds = searchByKeyword(keyword);
+            if (videoIds.isEmpty()) return Collections.emptyList();
+            videos = videoRepository.findByUuidAndVideoIdInOrderByCreatedAtDesc(uuid, videoIds);
+        } else {
+            videos = videoRepository.findByUuidOrderByCreatedAtDesc(uuid);
+        }
         List<Map<String, Object>> result = new ArrayList<>();
         for (Video v : videos) {
             Map<String, Object> item = new LinkedHashMap<>();
@@ -275,6 +306,7 @@ public class VideoService {
             log.warn("删除加密文件失败: {}", e.getMessage());
         }
 
+        videoKeywordRepository.deleteByVideoId(videoId);
         videoRepository.delete(video);
         log.info("视频已删除: videoId={}", videoId);
     }
@@ -400,6 +432,62 @@ public class VideoService {
         }
     }
 
+    // ==================== 加密搜索索引 ====================
+
+    private void buildKeywordIndex(String videoId, Set<String> tokens) {
+        if (tokens.isEmpty()) return;
+        byte[] keyBytes = serverSecret.getBytes(StandardCharsets.UTF_8);
+        List<VideoKeyword> batch = new ArrayList<>(tokens.size());
+        for (String token : tokens) {
+            byte[] hash = CryptoUtil.hmacSM3(keyBytes, token.getBytes(StandardCharsets.UTF_8));
+            batch.add(new VideoKeyword(videoId, hash));
+        }
+        try {
+            videoKeywordRepository.saveAll(batch);
+        } catch (DataIntegrityViolationException e) {
+            log.debug("关键词索引已存在（幂等忽略）: videoId={}", videoId);
+        }
+    }
+
+    private Set<String> searchByKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) return Collections.emptySet();
+        Set<String> tokens = extractBigrams(normalize(keyword.trim()));
+        byte[] keyBytes = serverSecret.getBytes(StandardCharsets.UTF_8);
+        Set<String> videoIds = new LinkedHashSet<>();
+        for (String token : tokens) {
+            byte[] hash = CryptoUtil.hmacSM3(keyBytes, token.getBytes(StandardCharsets.UTF_8));
+            List<VideoKeyword> matches = videoKeywordRepository.findByKeywordHash(hash);
+            for (VideoKeyword m : matches) {
+                videoIds.add(m.getVideoId());
+            }
+        }
+        return videoIds;
+    }
+
+    private static String normalize(String text) {
+        if (text == null || text.isEmpty()) return text;
+        return Normalizer.normalize(text, Normalizer.Form.NFC).toLowerCase(Locale.ROOT);
+    }
+
+    static Set<String> extractBigrams(String text) {
+        Set<String> tokens = new LinkedHashSet<>();
+        if (text == null || text.length() < 2) {
+            if (text != null && !text.isBlank()) tokens.add(text);
+            return tokens;
+        }
+        // bigram: 每连续2字符
+        for (int i = 0; i < text.length() - 1; i++) {
+            tokens.add(text.substring(i, i + 2));
+        }
+        // 文本额外按空格/标点切完整词（Unicode 感知）
+        for (String word : text.split("[^\\p{L}\\p{N}]+")) {
+            if (!word.isBlank() && word.length() >= 2) {
+                tokens.add(word);
+            }
+        }
+        return tokens;
+    }
+
     // ==================== 内部方法 ====================
 
     private static final String[] MP4_BRANDS = {
@@ -482,6 +570,38 @@ public class VideoService {
             }
         } catch (IOException e) {
             log.warn("扫描临时目录失败: {}", e.getMessage());
+        }
+    }
+
+    // 启动时自动为缺少索引的旧视频构建关键词索引
+    @EventListener(ApplicationReadyEvent.class)
+    public void migrateExistingVideoKeywords() {
+        try {
+            int built = 0;
+            int page = 0;
+            List<Video> pageVideos;
+            do {
+                pageVideos = videoRepository.findAll(PageRequest.of(page++, 500)).getContent();
+                for (Video v : pageVideos) {
+                    try {
+                        if (videoKeywordRepository.countByVideoId(v.getVideoId()) > 0) continue;
+                        Set<String> tokens = new LinkedHashSet<>();
+                        String title = v.getTitle() != null
+                                ? v.getTitle() : Objects.toString(v.getOriginalFilename(), "");
+                        tokens.addAll(extractBigrams(normalize(title)));
+                        tokens.addAll(extractBigrams(normalize(
+                                Objects.toString(v.getOriginalFilename(), ""))));
+                        buildKeywordIndex(v.getVideoId(), tokens);
+                        built++;
+                    } catch (Exception e) {
+                        log.warn("旧视频索引构建失败: videoId={}, error={}",
+                                v.getVideoId(), e.getMessage());
+                    }
+                }
+            } while (!pageVideos.isEmpty());
+            if (built > 0) log.info("已为 {} 个旧视频构建搜索索引", built);
+        } catch (Exception e) {
+            log.warn("旧视频索引迁移未完成: {}", e.getMessage());
         }
     }
 }

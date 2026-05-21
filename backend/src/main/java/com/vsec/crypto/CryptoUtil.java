@@ -265,7 +265,7 @@ public final class CryptoUtil {
         return output;
     }
 
-    private static byte[] hmacSM3(byte[] key, byte[] data) {
+    public static byte[] hmacSM3(byte[] key, byte[] data) {
         HMac hmac = new HMac(new SM3Digest());
         hmac.init(new KeyParameter(key));
         hmac.update(data, 0, data.length);

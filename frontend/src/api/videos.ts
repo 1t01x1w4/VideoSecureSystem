@@ -1,8 +1,8 @@
 import api from './index'
 
 export const videosApi = {
-  list() {
-    return api.get('/videos')
+  list(keyword?: string) {
+    return api.get('/videos', { params: keyword ? { keyword } : undefined })
   },
   initUpload(filename: string, totalSize: number, totalChunks: number) {
     return api.post('/videos/upload/init', {

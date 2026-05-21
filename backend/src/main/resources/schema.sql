@@ -30,6 +30,14 @@ CREATE TABLE IF NOT EXISTS videos (
     created_at         TIMESTAMP    NOT NULL DEFAULT NOW()
 );
 
+-- 加密搜索关键词索引表（SM3 哈希）
+CREATE TABLE IF NOT EXISTS video_keywords (
+    id           BIGSERIAL    PRIMARY KEY,
+    video_id     VARCHAR(36)  NOT NULL REFERENCES videos(video_id) ON DELETE CASCADE,
+    keyword_hash BYTEA        NOT NULL,
+    UNIQUE (video_id, keyword_hash)
+);
+
 -- 审计日志表
 CREATE TABLE IF NOT EXISTS audit_logs (
     id          BIGSERIAL    PRIMARY KEY,
@@ -49,3 +57,4 @@ CREATE INDEX IF NOT EXISTS idx_videos_uuid ON videos(uuid);
 CREATE INDEX IF NOT EXISTS idx_audit_uuid ON audit_logs(uuid);
 CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action);
 CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_keyword_hash ON video_keywords (keyword_hash);

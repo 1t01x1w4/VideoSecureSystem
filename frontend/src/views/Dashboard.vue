@@ -29,6 +29,17 @@
       <router-link to="/upload" class="btn-upload">+ 上传视频</router-link>
     </div>
 
+    <div class="search-bar">
+      <input
+        v-model="keyword"
+        type="text"
+        placeholder="搜索视频标题或文件名..."
+        @keyup.enter="search"
+      />
+      <button class="btn-search" @click="search">搜索</button>
+      <button v-if="keyword" class="btn-clear" @click="clearSearch">清除</button>
+    </div>
+
     <div v-if="loading" class="loading">加载中...</div>
     <table v-else-if="videos.length" class="video-table">
       <thead>
@@ -86,10 +97,13 @@ const router = useRouter()
 const videos = ref<VideoItem[]>([])
 const totalSize = ref(0)
 const loading = ref(true)
+const keyword = ref('')
 
-onMounted(async () => {
+async function fetchVideos() {
+  loading.value = true
   try {
-    const res = await videosApi.list()
+    const kw = keyword.value.trim() || undefined
+    const res = await videosApi.list(kw)
     videos.value = res.data
     totalSize.value = res.data.reduce((s: number, v: VideoItem) => s + v.size, 0)
   } catch {
@@ -97,7 +111,16 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+function search() { fetchVideos() }
+
+function clearSearch() {
+  keyword.value = ''
+  fetchVideos()
+}
+
+onMounted(() => { fetchVideos() })
 
 function formatSize(bytes: number) {
   if (!bytes) return '0 B'
@@ -222,6 +245,60 @@ async function removeVideo(id: string) {
 
 .btn-upload:hover {
   box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+}
+
+.search-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.search-bar input {
+  flex: 1;
+  max-width: 360px;
+  padding: 9px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-bar input:focus {
+  border-color: #06b6d4;
+}
+
+.btn-search {
+  padding: 9px 20px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-search:hover {
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.4);
+}
+
+.btn-clear {
+  padding: 9px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-clear:hover {
+  background: var(--border-color);
 }
 
 .video-table {

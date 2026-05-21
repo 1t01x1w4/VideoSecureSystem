@@ -100,9 +100,11 @@ public class VideoController {
     // ==================== 视频管理 ====================
 
     @GetMapping
-    public ResponseEntity<List<Map<String, Object>>> listVideos(HttpServletRequest request) {
+    public ResponseEntity<List<Map<String, Object>>> listVideos(
+            HttpServletRequest request,
+            @RequestParam(required = false) String keyword) {
         String uuid = requireUuid(request);
-        return ResponseEntity.ok(videoService.listVideos(uuid));
+        return ResponseEntity.ok(videoService.listVideos(uuid, keyword));
     }
 
     @DeleteMapping("/{videoId}")
