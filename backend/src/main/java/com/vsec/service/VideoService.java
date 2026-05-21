@@ -38,7 +38,7 @@ public class VideoService {
     public VideoService(VideoRepository videoRepository,
                         StringRedisTemplate redis,
                         StorageService storageService,
-                        @Value("${app.storage.temp-dir:C:/tools/vsec/storage/temp}") String tempDir) {
+                        @Value("${app.storage.temp-dir:/tmp/vsec-storage}") String tempDir) {
         this.videoRepository = videoRepository;
         this.redis = redis;
         this.storageService = storageService;

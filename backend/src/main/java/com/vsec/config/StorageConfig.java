@@ -13,10 +13,10 @@ public class StorageConfig {
     @Value("${app.minio.endpoint:http://localhost:9000}")
     private String minioEndpoint;
 
-    @Value("${app.minio.access-key:minioadmin}")
+    @Value("${app.minio.access-key:changeme}")
     private String minioAccessKey;
 
-    @Value("${app.minio.secret-key:minioadmin}")
+    @Value("${app.minio.secret-key:changeme}")
     private String minioSecretKey;
 
     @Value("${app.minio.bucket:vsec-videos}")

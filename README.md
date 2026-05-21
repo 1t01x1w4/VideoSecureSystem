@@ -245,6 +245,6 @@
 - [x] **Redis 安全加固**：`redis.vsec.conf` 加载启动，密码认证 + `save ""` 关闭 RDB + `appendonly no`
 - [x] **前端上传类型过滤**：`accept="video/mp4,.mp4"` + 拖拽实时文件类型检测 + 非 MP4 红色警告
 
-> **当前环境**：PostgreSQL（`localhost:5432`）、Redis（`localhost:6379`，已设置密码 `vsec_redis`）、MinIO（`localhost:9000` / `:9001`）已配置运行。后端 HTTPS 端口 `8443`（自签名证书），前端 `http://localhost:5173` 通过 Vite 代理转发 API 请求到 HTTPS 后端。
+> **当前环境**：PostgreSQL（`localhost:5432`）、Redis（`localhost:6379`，已设置密码 `changeme`）、MinIO（`localhost:9000` / `:9001`）已配置运行。后端 HTTPS 端口 `8443`（自签名证书），前端 `http://localhost:5173` 通过 Vite 代理转发 API 请求到 HTTPS 后端。
 
 > **使用说明**：详见 [HOW_TO_USE.md](HOW_TO_USE.md)，包含完整的服务启动和 API 调用指南。

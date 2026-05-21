@@ -3,13 +3,13 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${DB_USERNAME:-vsec}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-vsec123}
-      POSTGRES_DB: ${DB_NAME:-vsec_storage}
+      POSTGRES_USER: ${DB_USERNAME:-changeme}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: ${DB_NAME:-changeme}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-vsec} -d ${DB_NAME:-vsec_storage}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-changeme} -d ${DB_NAME:-changeme}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -22,13 +22,13 @@ services:
     image: redis:7-alpine
     command: >
       redis-server
-      --requirepass ${REDIS_PASSWORD:-vsec_redis}
+      --requirepass ${REDIS_PASSWORD:-changeme}
       --save ""
       --appendonly no
       --maxmemory 256mb
       --maxmemory-policy allkeys-lru
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-vsec_redis}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -41,8 +41,8 @@ services:
     image: minio/minio:latest
     command: server /data --console-address :9001
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-changeme}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-changeme}
     volumes:
       - minio_data:/data
     healthcheck:
@@ -63,23 +63,23 @@ services:
       dockerfile: Dockerfile.backend
     environment:
       # 数据源 - 指向 Docker 服务名
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-vsec_storage}
-      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-vsec}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-vsec123}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-changeme}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-changeme}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-changeme}
       # Redis
       SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-vsec_redis}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-changeme}
       # MinIO
       APP_MINIO_ENDPOINT: http://minio:9000
-      APP_MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
-      APP_MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      APP_MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-changeme}
+      APP_MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-changeme}
       # 安全
       SERVER_SSL_KEY_STORE: file:/app/keystore.p12
-      KEYSTORE_PASSWORD: ${KEYSTORE_PASSWORD:-vsec123}
-      VSEC_SERVER_SECRET: ${VSEC_SERVER_SECRET:-vsec-server-secret-dev}
+      KEYSTORE_PASSWORD: ${KEYSTORE_PASSWORD:-changeme}
+      VSEC_SERVER_SECRET: ${VSEC_SERVER_SECRET:-changeme}
       # 邮件
-      MAIL_USERNAME: ${MAIL_USERNAME:-dev@vsec.local}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-dev}
+      MAIL_USERNAME: ${MAIL_USERNAME:-changeme@example.com}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-changeme}
       # 临时目录（容器内路径）
       APP_STORAGE_TEMP_DIR: /tmp/vsec-upload
       # 等待数据库就绪再启动

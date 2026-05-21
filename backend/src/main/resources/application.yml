@@ -5,8 +5,8 @@ spring:
   # === 数据源 PostgreSQL ===
   datasource:
     url: jdbc:postgresql://localhost:5432/vsec_storage
-    username: ${DB_USERNAME:vsec}
-    password: ${DB_PASSWORD:vsec123}
+    username: ${DB_USERNAME:changeme}
+    password: ${DB_PASSWORD:changeme}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -42,8 +42,8 @@ spring:
   mail:
     host: smtp.qq.com
     port: 587
-    username: ${MAIL_USERNAME:dev@vsec.local}
-    password: ${MAIL_PASSWORD:dev}
+    username: ${MAIL_USERNAME:changeme@example.com}
+    password: ${MAIL_PASSWORD:changeme}
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
@@ -60,7 +60,7 @@ server:
   port: ${SERVER_PORT:8443}
   ssl:
     key-store: classpath:keystore.p12
-    key-store-password: ${KEYSTORE_PASSWORD:changeit}
+    key-store-password: ${KEYSTORE_PASSWORD:changeme}
     key-store-type: PKCS12
     key-alias: vsec
   servlet:
@@ -100,13 +100,13 @@ app:
   # MinIO 对象存储
   minio:
     endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
-    access-key: ${MINIO_ACCESS_KEY:minioadmin}
-    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    access-key: ${MINIO_ACCESS_KEY:changeme}
+    secret-key: ${MINIO_SECRET_KEY:changeme}
     bucket: ${MINIO_BUCKET:vsec-videos}
 
   # 上传临时目录
   storage:
-    temp-dir: ${TEMP_DIR:C:/tools/vsec/storage/temp}
+    temp-dir: ${TEMP_DIR:/tmp/vsec-storage}
 
 # === 日志 ===
 logging:
