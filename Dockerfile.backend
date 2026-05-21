@@ -1,5 +1,6 @@
 # ===== Stage 1: 构建 =====
-FROM maven:3-eclipse-temurin-21 AS build
+FROM eclipse-temurin:21-jdk-alpine AS build
+RUN apk add --no-cache maven
 WORKDIR /build
 COPY backend/pom.xml .
 RUN mvn dependency:go-offline -q
@@ -8,7 +9,7 @@ RUN mvn package -DskipTests -q
 
 # ===== Stage 2: 运行 =====
 FROM eclipse-temurin:21-jre-alpine
-RUN apk add --no-cache openjdk21-jre-headless  # keytool 依赖
+RUN apk add --no-cache openjdk21-jre-headless
 WORKDIR /app
 COPY --from=build /build/target/*.jar app.jar
 COPY docker-entrypoint.sh .
