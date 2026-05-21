@@ -18,6 +18,7 @@
 - **主密钥 MK**：通过 Argon2id + HKDF 从口令派生，仅在登录期间存在于服务端内存（Session/Redis），永不落盘。
 - **数据加密密钥 DEK**：每个视频上传时随机生成的 16 字节密钥（SM4 仅支持 128 位）。
 - **加密后的 DEK**：由 MK 加密后的 DEK，存储在数据库中。
+- **SM3 哈希检索索引**：上传时对视频标题/文件名做 bigram 分词 + HMAC-SM3(keyword, server_secret) 存入索引表，搜索时同态计算不可逆匹配，实现加密检索。
 
 ## 三、技术栈
 
@@ -145,6 +146,15 @@
 | detail | TEXT | | 额外信息（禁止包含密钥） |
 | created_at | TIMESTAMP | NOT NULL DEFAULT NOW() | 操作时间 |
 
+### video_keywords（加密检索索引）
+| 字段名 | 类型 | 约束 | 说明 |
+|--------|------|------|------|
+| id | BIGSERIAL | PRIMARY KEY | 自增主键 |
+| video_id | VARCHAR(36) | FOREIGN KEY → videos.video_id ON DELETE CASCADE | 所属视频 |
+| keyword_hash | BYTEA | NOT NULL | HMAC-SM3(keyword, server_secret) 的 32 字节哈希 |
+
+> 唯一约束 `UNIQUE(video_id, keyword_hash)` 防止重复索引；B-tree 索引 `idx_keyword_hash` 加速等值查询。删除视频时 CASCADE 自动清理索引。
+
 ## 七、API 路由设计
 
 > 所有 API 前缀：`/api`
@@ -186,7 +196,8 @@
   Response: `{ video_id, message }`
 
 - `GET /api/videos`  
-  获取当前用户的视频列表  
+  获取当前用户的视频列表（支持加密检索）  
+  Query: `?keyword=旅行`（可选，基于 SM3 哈希索引的不可逆密文匹配）  
   Response: `[{ video_id, title, original_filename, size, mime_type, created_at }]`
 
 - `DELETE /api/videos/{videoId}`  
@@ -244,6 +255,7 @@
 - [x] **服务端 MP4 文件头校验**（`chunkIndex == 0` 时验证 `ftyp` 魔数 + major brand）
 - [x] **Redis 安全加固**：`redis.vsec.conf` 加载启动，密码认证 + `save ""` 关闭 RDB + `appendonly no`
 - [x] **前端上传类型过滤**：`accept="video/mp4,.mp4"` + 拖拽实时文件类型检测 + 非 MP4 红色警告
+- [x] **加密视频检索**：SM3 哈希索引 + bigram 分词，支持中英文混合检索，不可逆反推原文（`GET /api/videos?keyword=`）
 
 > **当前环境**：PostgreSQL（`localhost:5432`）、Redis（`localhost:6379`，已设置密码 `vsec123`）、MinIO（`localhost:9000` / `:9001`）已配置运行。后端 HTTPS 端口 `8443`（自签名证书），前端 `http://localhost:5173` 通过 Vite 代理转发 API 请求到 HTTPS 后端。
 
