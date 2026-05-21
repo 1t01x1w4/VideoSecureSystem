@@ -99,7 +99,7 @@ public class VideoService {
         if (state == null) throw new VsecException("上传会话不存在或已过期");
         if (!uuid.equals(state.get("uuid"))) throw new VsecException("无权操作此上传");
 
-        int totalChunks = (int) state.get("totalChunks");
+        int totalChunks = ((Number) state.get("totalChunks")).intValue();
         if (chunkIndex < 0 || chunkIndex >= totalChunks)
             throw new VsecException("分块索引无效: " + chunkIndex);
 
@@ -150,7 +150,7 @@ public class VideoService {
         if (!uuid.equals(state.get("uuid"))) throw new VsecException("无权操作此上传");
 
         String chunksKey = "upload:chunks:" + uploadId;
-        int totalChunks = (int) state.get("totalChunks");
+        int totalChunks = ((Number) state.get("totalChunks")).intValue();
         Long receivedCount = redis.opsForSet().size(chunksKey);
         if (receivedCount == null || receivedCount != totalChunks)
             throw new VsecException("分块未全部上传: " + receivedCount + "/" + totalChunks);
@@ -173,7 +173,7 @@ public class VideoService {
 
             var sm3Original = new org.bouncycastle.crypto.digests.SM3Digest();
             var sm3Encrypted = new org.bouncycastle.crypto.digests.SM3Digest();
-            int cs = (int) state.get("chunkSize");
+            int cs = ((Number) state.get("chunkSize")).intValue();
 
             try (OutputStream out = Files.newOutputStream(tempEncFile)) {
                 for (int i = 0; i < totalChunks; i++) {

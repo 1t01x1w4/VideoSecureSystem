@@ -106,7 +106,7 @@ app:
 
   # 上传临时目录
   storage:
-    temp-dir: ${TEMP_DIR:/tmp/vsec-storage}
+    temp-dir: ${APP_STORAGE_TEMP_DIR:/tmp/vsec-storage}
 
 # === 日志 ===
 logging:

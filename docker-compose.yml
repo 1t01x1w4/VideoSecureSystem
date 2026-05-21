@@ -82,6 +82,8 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD:-changeme}
       # 临时目录（容器内路径）
       APP_STORAGE_TEMP_DIR: /tmp/vsec-upload
+      # HTTP 前端兼容（浏览器通过 HTTP 访问 Nginx，需关闭 Cookie Secure）
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: false
       # 等待数据库就绪再启动
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
