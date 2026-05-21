@@ -90,7 +90,7 @@ docker compose down -v     # 同时删除数据卷（重置数据库和文件）
 
 ```bash
 # 方式一：pg_ctl 启动
-/c/tools/pgsql/bin/pg_ctl start -D /c/tools/pgsql/data -l /c/tools/pgsql/data/logfile.log
+pg_ctl start -D /path/to/pgsql/data -l /path/to/pgsql/data/logfile.log
 
 # 方式二：若安装为 Windows 服务
 net start postgresql-x64-16
@@ -98,13 +98,13 @@ net start postgresql-x64-16
 
 验证：
 ```bash
-/c/tools/pgsql/bin/psql -U vsec -d vsec_storage -c "SELECT 1"
+psql -U vsec -d vsec_storage -c "SELECT 1"
 ```
 
 ### 4.2 启动 Redis
 
 ```bash
-/c/tools/redis/redis-server.exe C:/tools/redis/redis.vsec.conf
+redis-server /path/to/redis.conf
 ```
 
 验证：
@@ -118,19 +118,22 @@ redis-cli -a vsec123 ping   # 返回 PONG
 
 #### 4.3.1 下载 MinIO
 
-MinIO 二进制文件位于 `C:\tools\minio\minio.exe`。如需重新下载：
+从 MinIO 官网下载对应平台的二进制文件：
 
-```powershell
-# 在浏览器中打开或使用下载工具：
-# https://dl.min.io/server/minio/release/windows-amd64/minio.exe
-# 下载后放置到 C:\tools\minio\minio.exe
+```bash
+# Linux/macOS
+wget https://dl.min.io/server/minio/release/linux-amd64/minio
+chmod +x minio
+
+# Windows (PowerShell)
+# 在浏览器中打开 https://dl.min.io/server/minio/release/windows-amd64/minio.exe
 ```
 
 #### 4.3.2 启动 MinIO 服务
 
 ```bash
-mkdir -p C:/tools/minio/data
-C:/tools/minio/minio.exe server C:/tools/minio/data --console-address :9001
+mkdir -p /path/to/minio/data
+minio server /path/to/minio/data --console-address :9001
 ```
 
 启动后输出示例：
@@ -168,7 +171,7 @@ app:
     secret-key: minioadmin
     bucket: vsec-videos
   storage:
-    temp-dir: C:/tools/vsec/storage/temp  # 上传临时分片目录
+    temp-dir: /tmp/vsec-storage  # 上传临时分片目录
 ```
 
 加密视频存储于 MinIO 的 `vsec-videos` Bucket，上传过程中的临时分片使用本地 `temp-dir`，完成后自动清理。
@@ -209,15 +212,13 @@ app:
 
 ```bash
 cd backend
-export JAVA_HOME="/c/Users/淋着雨/jdk-21/jdk-21.0.11+10"
-/c/tools/maven/bin/mvn clean compile
+mvn clean compile
 ```
 
 ### 6.2 运行
 
 ```bash
-export JAVA_HOME="/c/Users/淋着雨/jdk-21/jdk-21.0.11+10"
-/c/tools/maven/bin/mvn spring-boot:run
+mvn spring-boot:run
 ```
 
 首次启动时 Hibernate 会自动建表（`ddl-auto: update`）。看到以下日志表示启动成功：
@@ -362,7 +363,7 @@ curl -s -X POST https://localhost:8443/api/auth/logout -b cookies.txt
 
 ## 八、存储说明
 
-加密视频统一存储在 MinIO 的 `vsec-videos` Bucket 中（路径：`{uuid}/{videoId}.enc`）。上传过程中的临时分片使用本地 `temp-dir`（`C:/tools/vsec/storage/temp`），上传完成后自动清理。
+加密视频统一存储在 MinIO 的 `vsec-videos` Bucket 中（路径：`{uuid}/{videoId}.enc`）。上传过程中的临时分片使用本地 `temp-dir`（`/tmp/vsec-storage`），上传完成后自动清理。
 
 ---
 
@@ -386,17 +387,6 @@ VideoSecureSystem/
 ├── frontend/                        # Vue 3 前端
 ├── HOW_TO_USE.md                    # 本文件
 └── README.md                        # 项目总览
-```
-
-```
-C:/tools/
-├── vsec/storage/
-│   └── temp/                        # 上传临时分片（上传完成后自动清理）
-├── minio/                           # MinIO 安装目录 / 加密视频数据
-│   ├── minio.exe                    # MinIO 服务端二进制
-│   └── data/                        # MinIO 数据目录
-├── pgsql/                           # PostgreSQL 安装
-└── redis/                           # Redis 安装
 ```
 
 ---
