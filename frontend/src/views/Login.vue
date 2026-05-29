@@ -87,7 +87,7 @@ async function sendCode() {
       countdown.value--
       if (countdown.value <= 0) clearInterval(timer)
     }, 1000)
-    alert('验证码已发送（开发环境请查看控制台输出）')
+    // 验证码发送成功，按钮开始倒计时
   } catch (e: any) {
     errorMsg.value = e.response?.data?.message || '发送验证码失败'
   }
