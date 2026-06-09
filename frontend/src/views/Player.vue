@@ -15,6 +15,7 @@
         autoplay
         playsinline
         webkit-playsinline
+        crossorigin="use-credentials"
         x5-video-player-type="h5"
         x5-video-orientation="portraint"
         style="width:100%;height:100%"
