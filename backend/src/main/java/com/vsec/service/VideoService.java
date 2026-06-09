@@ -340,6 +340,12 @@ public class VideoService {
         return video;
     }
 
+    public String getVideoOwner(String videoId) {
+        Video video = videoRepository.findById(videoId)
+                .orElseThrow(() -> new VsecException("视频不存在"));
+        return video.getUuid();
+    }
+
     /**
      * 流式解密整个视频到 OutputStream（用于全文件播放和下载）。
      * 以 1MB 块为单位读取密文 → 解密 → 写入，不会将整个文件加载到内存。
@@ -603,5 +609,29 @@ public class VideoService {
         } catch (Exception e) {
             log.warn("旧视频索引迁移未完成: {}", e.getMessage());
         }
+    }
+
+    // ==================== 流播放临时 token ====================
+
+    public String generateStreamToken(String uuid, String videoId, String encKeyBase64) {
+        String token = UUID.randomUUID().toString();
+        String key = "stream_token:" + token;
+        redis.opsForHash().put(key, "uuid", uuid);
+        redis.opsForHash().put(key, "videoId", videoId);
+        redis.opsForHash().put(key, "encKey", encKeyBase64);
+        redis.expire(key, 5, TimeUnit.MINUTES);
+        return token;
+    }
+
+    public String validateStreamToken(String token, String videoId) {
+        if (token == null || token.isBlank()) return null;
+        String key = "stream_token:" + token;
+        String storedVideoId = (String) redis.opsForHash().get(key, "videoId");
+        if (!videoId.equals(storedVideoId)) return null;
+        String encKeyBase64 = (String) redis.opsForHash().get(key, "encKey");
+        if (encKeyBase64 == null || encKeyBase64.isBlank()) return null;
+        // 一次性使用，用完即删
+        redis.delete(key);
+        return encKeyBase64;
     }
 }

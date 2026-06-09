@@ -7,7 +7,9 @@
     </div>
 
     <div class="player-wrapper">
+      <div v-if="loading" class="loading-overlay">加载中...</div>
       <video
+        v-show="!loading"
         ref="videoEl"
         class="video-js vjs-big-play-centered"
         controls
@@ -15,13 +17,10 @@
         autoplay
         playsinline
         webkit-playsinline
-        crossorigin="use-credentials"
         x5-video-player-type="h5"
         x5-video-orientation="portraint"
         style="width:100%;height:100%"
-      >
-        <source :src="streamUrl" type="video/mp4" />
-      </video>
+      />
     </div>
 
     <div class="player-info">
@@ -38,19 +37,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import axios from 'axios'
 
 const route = useRoute()
 const videoEl = ref<HTMLVideoElement | null>(null)
 const videoTitle = ref('')
+const streamUrl = ref('')
+const loading = ref(true)
 
-const videoId = computed(() => route.params.videoId as string)
-const streamUrl = computed(() => `/api/videos/${videoId.value}/stream`)
+const videoId = route.params.videoId as string
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const res = await axios.get(`/api/videos/${videoId}/stream-token`)
+    streamUrl.value = `/api/videos/${videoId}/stream?token=${res.data.token}`
+  } catch {
+    console.warn('获取播放凭证失败，请确认已登录')
+  } finally {
+    loading.value = false
+  }
   const el = videoEl.value
   if (!el) return
+  if (streamUrl.value) {
+    el.src = streamUrl.value
+  }
   el.addEventListener('error', () => {
     console.warn('视频加载失败，请确认后端已启动且会话有效')
   })
@@ -66,7 +78,7 @@ onUnmounted(() => {
 })
 
 function downloadVideo() {
-  window.open(`/api/videos/${videoId.value}/download`, '_blank')
+  window.open(`/api/videos/${videoId}/download`, '_blank')
 }
 </script>
 
@@ -107,6 +119,18 @@ function downloadVideo() {
   overflow: hidden;
   background: #000;
   border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 16px;
+  z-index: 1;
 }
 
 .player-info {

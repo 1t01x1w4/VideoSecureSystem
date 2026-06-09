@@ -44,6 +44,7 @@ public class SecurityConfig {
             // 权限配置
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/videos/*/stream", "/api/videos/*/stream-token").permitAll()
                 .requestMatchers("/api/admin/**").authenticated()
                 .anyRequest().authenticated()
             )

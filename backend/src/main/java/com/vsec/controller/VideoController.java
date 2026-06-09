@@ -130,14 +130,38 @@ public class VideoController {
 
     // ==================== 播放与下载 ====================
 
-    @GetMapping("/{videoId}/stream")
-    public ResponseEntity<StreamingResponseBody> streamVideo(
+    @GetMapping("/{videoId}/stream-token")
+    public ResponseEntity<Map<String, String>> getStreamToken(
             @PathVariable String videoId,
             HttpServletRequest request) {
         String uuid = requireUuid(request);
         HttpSession session = request.getSession(false);
-        byte[] mk = authService.getEncKey(session);
-        if (mk == null) throw new VsecException("会话密钥已过期，请重新登录", org.springframework.http.HttpStatus.UNAUTHORIZED);
+        String encKeyBase64 = (String) session.getAttribute("enc_key");
+        if (encKeyBase64 == null)
+            throw new VsecException("会话密钥已过期，请重新登录", org.springframework.http.HttpStatus.UNAUTHORIZED);
+        String token = videoService.generateStreamToken(uuid, videoId, encKeyBase64);
+        return ResponseEntity.ok(Map.of("token", token));
+    }
+
+    @GetMapping("/{videoId}/stream")
+    public ResponseEntity<StreamingResponseBody> streamVideo(
+            @PathVariable String videoId,
+            @RequestParam(required = false) String token,
+            HttpServletRequest request) {
+        String uuid;
+        byte[] mk;
+        if (token != null && !token.isBlank()) {
+            String encKeyBase64 = videoService.validateStreamToken(token, videoId);
+            if (encKeyBase64 == null)
+                throw new VsecException("播放链接已失效，请刷新页面", org.springframework.http.HttpStatus.UNAUTHORIZED);
+            mk = authService.decryptEncKey(encKeyBase64);
+            uuid = videoService.getVideoOwner(videoId);
+        } else {
+            uuid = requireUuid(request);
+            HttpSession session = request.getSession(false);
+            mk = authService.getEncKey(session);
+            if (mk == null) throw new VsecException("会话密钥已过期，请重新登录", org.springframework.http.HttpStatus.UNAUTHORIZED);
+        }
 
         Video video = videoService.getVideo(uuid, videoId);
         auditLogService.record(uuid, "VIEW", videoId, request, "SUCCESS",

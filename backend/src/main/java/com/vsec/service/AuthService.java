@@ -350,7 +350,12 @@ public class AuthService {
         if (session == null) return null;
         String b64 = (String) session.getAttribute(SESSION_ENC_KEY);
         if (b64 == null) return null;
-        byte[] wrapped = Base64.getDecoder().decode(b64);
+        return decryptEncKey(b64);
+    }
+
+    public byte[] decryptEncKey(String encKeyBase64) {
+        if (encKeyBase64 == null) return null;
+        byte[] wrapped = Base64.getDecoder().decode(encKeyBase64);
         return CryptoUtil.decryptWithServerKey(wrapped, serverSecret);
     }
 
