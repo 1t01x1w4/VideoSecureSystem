@@ -13,6 +13,10 @@
         controls
         preload="auto"
         autoplay
+        playsinline
+        webkit-playsinline
+        x5-video-player-type="h5"
+        x5-video-orientation="portraint"
         style="width:100%;height:100%"
       >
         <source :src="streamUrl" type="video/mp4" />
@@ -35,7 +39,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import axios from 'axios'
 
 const route = useRoute()
 const videoEl = ref<HTMLVideoElement | null>(null)
@@ -61,25 +64,8 @@ onUnmounted(() => {
   }
 })
 
-async function downloadVideo() {
-  try {
-    const res = await axios.get(`/api/videos/${videoId.value}/download`, {
-      responseType: 'blob',
-      withCredentials: true,
-    })
-    const url = URL.createObjectURL(res.data)
-    const a = document.createElement('a')
-    a.href = url
-    const disp = res.headers['content-disposition']
-    const match = disp?.match(/filename="(.+)"/)
-    a.download = match?.[1] || `${videoId.value}.mp4`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  } catch {
-    alert('下载失败，请确认会话有效且文件存在')
-  }
+function downloadVideo() {
+  window.open(`/api/videos/${videoId.value}/download`, '_blank')
 }
 </script>
 
